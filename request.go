@@ -1,7 +1,6 @@
 package tinyclient
 
 import (
-	"bytes"
 	"net/http"
 	"net/url"
 	"time"
@@ -10,19 +9,21 @@ import (
 type Request struct {
 	URL        string
 	Method     string
-	Token       string
-	AuthScheme  string
-	QueryParam  url.Values
-	FormData    url.Values
-	Header      http.Header
-	Time        time.Time
-	Body        interface{}
-	Result      interface{}
-	Error       interface{}
-	Cookies     []*http.Cookie
-	HttpRequest *http.Request
-	bodyBuf             *bytes.Buffer
-	setContentLength    bool
+	useSSL     bool
+	Token      string
+	AuthScheme string
+	QueryParam url.Values
+	FormData   url.Values
+	Header     http.Header
+	Time       time.Time
+	Body       interface{}
+	Result     interface{}
+	Error      interface{}
+	Cookies    []*http.Cookie
+	//HttpRequest is exposed because of missing cases of this client wrapper and so a professional user can handle for this edge
+	HttpRequest      *http.Request
+	setContentLength bool
+	bodyBytes        []byte
 }
 
 func (r *Request) SetBody(body interface{}) *Request {
@@ -45,7 +46,6 @@ func (r *Request) SetHeader(header, value string) *Request {
 	return r
 }
 
-
 // SetHeaders sets request headers
 func (r *Request) SetHeaders(headers map[string]string) *Request {
 	if len(headers) > 0 {
@@ -58,8 +58,6 @@ func (r *Request) SetHeaders(headers map[string]string) *Request {
 
 // SetContentType sets content type of request
 func (r *Request) SetContentType(contentType string) *Request {
-	r.Header.Set("Content-Type", contentType)
+	r.Header.Set(ContentType, contentType)
 	return r
 }
-
-
