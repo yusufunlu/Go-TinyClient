@@ -12,17 +12,15 @@ type Request struct {
 	//bodyBytes is not exposed, it is for holding Body interface internally as bytes and reading the body without spoiling HttpRequest.GetBody
 	bodyBytes []byte
 	Body      interface{}
-	Result    interface{}
 	Error     interface{}
 	Cookies   []*http.Cookie
 	//HttpRequest is exposed because of missing cases of this client wrapper and so a professional user can handle for this edge
-	HttpRequest      *http.Request
-	Headers          map[string]string
-	QueryParams      map[string]string
-	FormData         url.Values
-	Time             time.Time
-	useSSL           bool
-	setContentLength bool
+	HttpRequest *http.Request
+	Headers     map[string]string
+	QueryParams map[string]string
+	FormData    url.Values
+	Time        time.Time
+	useSSL      bool
 }
 
 func (r *Request) SetBody(body interface{}) *Request {

@@ -1,5 +1,18 @@
 # ![tinyclient](tiny.jpg) tinyclient
 
+#Features
+* Support body in string,[]byte,io.Reader,io.ReadCloser,map,slice or struct types
+* Support redirection
+* Not yet logger injection
+* Not yet default logger for request and response
+* Not yet auto user-agent info filling
+* Support XML as body
+* 
+
+
+
+
+
 #Theory
 * http.Request.Body is io.ReadCloser
 * fmt.Printf(response.Body) would fail

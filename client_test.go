@@ -228,13 +228,36 @@ func RedirectHandler(w http.ResponseWriter, r *http.Request) {
 func TestPostRedirect(t *testing.T) {
 
 	// Start a local HTTP server
-
 	server := httptest.NewServer(
-		http.HandlerFunc(RedirectHandler),
+		http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			// Test request
+			require.Equal(t, req.URL.String(), "/post")
+			require.Equal(t, req.Method, "POST")
+			require.Equal(t, req.Header.Get("Content-Type"), "application/json; charset=utf-8")
+			require.Equal(t, req.Header.Get("Test-Header"), "this is a test")
+
+			rw.Header().Set("Content-Type", req.Header.Get("Content-Type"))
+
+			b, _ := ioutil.ReadAll(req.Body)
+			req.Body.Close()
+			fmt.Println("request body: ", string(b))
+
+			_, err := rw.Write(b)
+			require.NoError(t, err)
+		}),
 	)
 	defer server.Close()
 
-	url := fmt.Sprintf("%s/post", server.URL)
+	// Start a local HTTP server
+	redirectServer := httptest.NewServer(
+		http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			http.Redirect(rw, req, server.URL+req.RequestURI, http.StatusFound)
+
+		}),
+	)
+	defer redirectServer.Close()
+
+	url := fmt.Sprintf("%s/post", redirectServer.URL)
 
 	client := tiny.CreateClient().SetTimeout(30)
 	request := client.NewRequest().SetURL(url).SetMethod("POST")
