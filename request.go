@@ -7,23 +7,22 @@ import (
 )
 
 type Request struct {
-	URL        string
-	Method     string
-	useSSL     bool
-	Token      string
-	AuthScheme string
-	QueryParam url.Values
-	FormData   url.Values
-	Header     http.Header
-	Time       time.Time
-	Body       interface{}
-	Result     interface{}
-	Error      interface{}
-	Cookies    []*http.Cookie
+	URL    string
+	Method string
+	//bodyBytes is not exposed, it is for holding Body interface internally as bytes and reading the body without spoiling HttpRequest.GetBody
+	bodyBytes []byte
+	Body      interface{}
+	Result    interface{}
+	Error     interface{}
+	Cookies   []*http.Cookie
 	//HttpRequest is exposed because of missing cases of this client wrapper and so a professional user can handle for this edge
 	HttpRequest      *http.Request
+	Headers          map[string]string
+	QueryParams      map[string]string
+	FormData         url.Values
+	Time             time.Time
+	useSSL           bool
 	setContentLength bool
-	bodyBytes        []byte
 }
 
 func (r *Request) SetBody(body interface{}) *Request {
@@ -42,7 +41,7 @@ func (r *Request) SetURL(url string) *Request {
 }
 
 func (r *Request) SetHeader(header, value string) *Request {
-	r.Header.Set(header, value)
+	r.Headers[header] = value
 	return r
 }
 
@@ -50,7 +49,7 @@ func (r *Request) SetHeader(header, value string) *Request {
 func (r *Request) SetHeaders(headers map[string]string) *Request {
 	if len(headers) > 0 {
 		for k, v := range headers {
-			r.Header.Set(k, v)
+			r.Headers[k] = v
 		}
 	}
 	return r
@@ -58,6 +57,6 @@ func (r *Request) SetHeaders(headers map[string]string) *Request {
 
 // SetContentType sets content type of request
 func (r *Request) SetContentType(contentType string) *Request {
-	r.Header.Set(ContentType, contentType)
+	r.Headers[ContentType] = contentType
 	return r
 }

@@ -28,10 +28,10 @@ func TestPostString(t *testing.T) {
 			// Test request
 			require.Equal(t, req.URL.String(), "/post")
 			require.Equal(t, req.Method, "POST")
-			require.Equal(t, req.Header.Get("Content-Type"), "application/json")
+			require.Equal(t, req.Header.Get("Content-Type"), "application/json; charset=utf-8")
 			require.Equal(t, req.Header.Get("Test-Header"), "this is a test")
 
-			rw.Header().Set("Content-Type", "application/json")
+			rw.Header().Set("Content-Type", req.Header.Get("Content-Type"))
 
 			b, _ := ioutil.ReadAll(req.Body)
 
@@ -64,7 +64,7 @@ func TestPostString(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, 200, response.Response.StatusCode)
-	resultBody, err := response.Body()
+	resultBody, err := response.ReadBody()
 	require.Equal(t, string(resultBody), desiredData)
 }
 
@@ -76,10 +76,10 @@ func TestPostByte(t *testing.T) {
 			// Test request
 			require.Equal(t, req.URL.String(), "/post")
 			require.Equal(t, req.Method, "POST")
-			require.Equal(t, req.Header.Get(tiny.ContentType), tiny.JsonContentType)
+			require.Equal(t, req.Header.Get("Content-Type"), "application/json; charset=utf-8")
 			require.Equal(t, req.Header.Get("Test-Header"), "this is a test")
 
-			rw.Header().Set("Content-Type", "application/json")
+			rw.Header().Set("Content-Type", req.Header.Get("Content-Type"))
 
 			b, _ := ioutil.ReadAll(req.Body)
 
@@ -107,7 +107,7 @@ func TestPostByte(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, 200, response.Response.StatusCode)
-	resultBody, err := response.Body()
+	resultBody, err := response.ReadBody()
 	require.Equal(t, string(resultBody), desiredData)
 }
 
@@ -119,10 +119,10 @@ func TestPostReader(t *testing.T) {
 			// Test request
 			require.Equal(t, req.URL.String(), "/post")
 			require.Equal(t, req.Method, "POST")
-			require.Equal(t, req.Header.Get(tiny.ContentType), tiny.JsonContentType)
+			require.Equal(t, req.Header.Get("Content-Type"), "application/json; charset=utf-8")
 			require.Equal(t, req.Header.Get("Test-Header"), "this is a test")
 
-			rw.Header().Set("Content-Type", "application/json")
+			rw.Header().Set("Content-Type", req.Header.Get("Content-Type"))
 
 			b, _ := ioutil.ReadAll(req.Body)
 			req.Body.Close()
@@ -150,7 +150,7 @@ func TestPostReader(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, 200, response.Response.StatusCode)
-	resultBody, err := response.Body()
+	resultBody, err := response.ReadBody()
 	require.Equal(t, string(resultBody), desiredData)
 }
 
@@ -162,10 +162,10 @@ func TestPostJSONMapSuccess(t *testing.T) {
 			// Test request
 			require.Equal(t, req.URL.String(), "/post")
 			require.Equal(t, req.Method, "POST")
-			require.Equal(t, req.Header.Get(tiny.ContentType), tiny.JsonContentType)
+			require.Equal(t, req.Header.Get("Content-Type"), "application/json; charset=utf-8")
 			require.Equal(t, req.Header.Get("Test-Header"), "this is a test")
 
-			rw.Header().Set("Content-Type", "application/json")
+			rw.Header().Set("Content-Type", req.Header.Get("Content-Type"))
 
 			b, _ := ioutil.ReadAll(req.Body)
 			req.Body.Close()
@@ -181,7 +181,7 @@ func TestPostJSONMapSuccess(t *testing.T) {
 
 	client := tiny.CreateClient().SetTimeout(30)
 
-	requestBody := map[string]interface{}{"username": "testuser", "password": "testpass"}
+	requestBody := map[string]interface{}{"success": true, "data": "done!"}
 	request := client.NewRequest().SetBody(requestBody).SetURL(url).SetMethod("POST")
 	request.SetHeaders(map[string]string{"Test-Header": "this is a test"})
 	request.SetContentType("application/json; charset=utf-8")
@@ -193,11 +193,65 @@ func TestPostJSONMapSuccess(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, 200, response.Response.StatusCode)
-	resultBody, err := response.Body()
 
+	resultBody, err := response.ReadBody()
 	requestBodyString, err := json.Marshal(requestBody)
-
 	require.Equal(t, string(resultBody), string(requestBodyString))
+}
+
+func TestPostHTTPBinAdressSuccess(t *testing.T) {
+
+	url := "https://httpbin.org/post"
+
+	client := tiny.CreateClient().SetTimeout(30)
+
+	request := client.NewRequest().SetURL(url).SetMethod("POST")
+	request.SetContentType("application/json; charset=utf-8")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	response, err := client.Send(request, ctx)
+
+	require.NoError(t, err)
+	require.Equal(t, 200, response.Response.StatusCode)
+
+	resultBody, err := response.ReadBody()
+
+	fmt.Println(string(resultBody))
+}
+
+func RedirectHandler(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "https://httpbin.org/post", http.StatusFound)
+}
+
+func TestPostRedirect(t *testing.T) {
+
+	// Start a local HTTP server
+
+	server := httptest.NewServer(
+		http.HandlerFunc(RedirectHandler),
+	)
+	defer server.Close()
+
+	url := fmt.Sprintf("%s/post", server.URL)
+
+	client := tiny.CreateClient().SetTimeout(30)
+	request := client.NewRequest().SetURL(url).SetMethod("POST")
+	request.SetContentType("application/json; charset=utf-8")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	response, err := client.Send(request, ctx)
+
+	require.NoError(t, err)
+	require.Equal(t, 200, response.Response.StatusCode)
+
+	resultBody, err := response.ReadBody()
+
+	fmt.Println(string(resultBody))
+
 }
 
 func TestGet(t *testing.T) {

@@ -57,22 +57,26 @@ func (client *Client) SetTimeout(timeout time.Duration) *Client {
 // newRequest method creates a new request instance, it will be used for Get, Post, Put, Delete, Patch, Head, Options, etc.
 func (client *Client) NewRequest() *Request {
 	return &Request{
-		QueryParam:  url.Values{},
-		FormData:    url.Values{},
-		Header:      http.Header{},
+		QueryParams: map[string]string{},
+		Headers:     map[string]string{},
 		Cookies:     make([]*http.Cookie, 0),
-		HttpRequest: &http.Request{},
+		HttpRequest: &http.Request{
+			Header: make(http.Header),
+		},
+		FormData: url.Values{},
 	}
 }
 
 func (client *Client) Send(request *Request, ctx context.Context) (*Response, error) {
 
 	parseRequestBody(request)
-	client.fillRequestFields(request)
+	client.fillHttpRequest(request)
 
 	if request.HttpRequest.ContentLength > 0 && request.HttpRequest.GetBody == nil {
 		return nil, errors.New("request.GetBody cannot be nil because it prevents redirection when content length>0")
 	}
+
+	client.ctx = ctx
 
 	res, err := client.HTTPClient.Do(request.HttpRequest)
 
@@ -81,38 +85,39 @@ func (client *Client) Send(request *Request, ctx context.Context) (*Response, er
 	}
 
 	response := &Response{
-		Response: res,
+		Response:   res,
+		Request:    request,
+		receivedAt: time.Now(),
 	}
 
 	return response, nil
 }
 
+//parseRequestBody logics can't be in Request because of checking contentType
 func parseRequestBody(r *Request) (err error) {
-	contentType := r.Header.Get(ContentType)
+	contentType := r.Headers[ContentType]
+	if r.Body == nil {
+		return
+	}
 	kind := reflect.TypeOf(r.Body).Kind()
 
 	//reader case can be used for sending received request to another server
 	if reader, ok := r.Body.(io.Reader); ok {
-		r.HttpRequest.Body = ioutil.NopCloser(reader)
 		r.bodyBytes, err = io.ReadAll(reader)
 	} else if b, ok := r.Body.([]byte); ok {
 		r.bodyBytes = b
-		r.HttpRequest.Body = ioutil.NopCloser(bytes.NewReader(b))
 	} else if s, ok := r.Body.(string); ok {
 		r.bodyBytes = []byte(s)
-		r.HttpRequest.Body = ioutil.NopCloser(strings.NewReader(s))
 	} else if IsJSONType(contentType) &&
 		(kind == reflect.Struct || kind == reflect.Map || kind == reflect.Slice) {
 		b, err := json.Marshal(r.Body)
 		r.bodyBytes = b
-		r.HttpRequest.Body = ioutil.NopCloser(bytes.NewReader(b))
 		if err != nil {
 			return err
 		}
 	} else if IsXMLType(contentType) && (kind == reflect.Struct) {
 		b, err = xml.Marshal(r.Body)
 		r.bodyBytes = b
-		r.HttpRequest.Body = ioutil.NopCloser(bytes.NewReader(b))
 		if err != nil {
 			return
 		}
@@ -123,13 +128,20 @@ func parseRequestBody(r *Request) (err error) {
 	return
 }
 
-func (client *Client) fillRequestFields(r *Request) (err error) {
+func (client *Client) fillHttpRequest(r *Request) (err error) {
 
-	//r.HttpRequest.Body = ioutil.NopCloser(bytes.NewReader(r.bodyBytes))
+	//Set request Body
+	r.HttpRequest.Body = ioutil.NopCloser(bytes.NewReader(r.bodyBytes))
+	r.HttpRequest.Body = ioutil.NopCloser(bytes.NewBuffer(r.bodyBytes))
+	//redirection need reading the body more than once
+	r.HttpRequest.GetBody = func() (io.ReadCloser, error) {
+		return ioutil.NopCloser(strings.NewReader("deneme")), nil
+	}
+	r.HttpRequest.ContentLength = int64(len(r.bodyBytes))
+
 	// Set request URL
 	URL, err := GenerateURL(r.URL, r.useSSL)
 	if err != nil {
-		//logger.Errorf("Error generating URL: %s, %v", r.address, err)
 		return err
 	}
 	r.HttpRequest.URL = URL
@@ -137,7 +149,9 @@ func (client *Client) fillRequestFields(r *Request) (err error) {
 	// Set request method
 	r.HttpRequest.Method = r.Method
 	// Add headers into http request
-	r.HttpRequest.Header = r.Header
+	for key, value := range r.Headers {
+		r.HttpRequest.Header.Set(key, value)
+	}
 
 	// Add cookies from client instance into http request
 	for _, cookie := range client.Cookies {
@@ -159,12 +173,12 @@ func (client *Client) fillRequestFields(r *Request) (err error) {
 	}
 
 	// assign get body func for the underlying raw request instance
-	/*	r.HttpRequest.GetBody = func() (io.ReadCloser, error) {
-		if bodyCopy != nil {
-			return ioutil.NopCloser(bytes.NewReader(bodyCopy.Bytes())), nil
+	r.HttpRequest.GetBody = func() (io.ReadCloser, error) {
+		if r.bodyBytes != nil {
+			return ioutil.NopCloser(bytes.NewReader(r.bodyBytes)), nil
 		}
 		return nil, nil
-	}*/
+	}
 
 	return
 }
@@ -204,4 +218,15 @@ func GenerateURL(address string, useSSL bool) (*url.URL, error) {
 	}
 
 	return parsedURL, nil
+}
+
+// ReadBody reads already set bodyBytes field from Request which is wrapper of *http.Request
+func (r *Request) ReadBody() ([]byte, error) {
+
+	if len(r.bodyBytes) != 0 {
+		return r.bodyBytes, nil
+	}
+
+	err := errors.New("bodyBytes is empty")
+	return nil, err
 }
