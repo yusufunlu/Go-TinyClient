@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/host"
 	"io"
 	"io/ioutil"
 	"log"
@@ -26,6 +28,7 @@ var (
 )
 
 const (
+	ClientName        = "tinyclient"
 	ClientVersion     = "1.0.0"
 	httpClientTimeout = 15 * time.Second
 )
@@ -42,6 +45,7 @@ type Client struct {
 // NewClient creates a new TinyClient object.
 func NewClient() *Client {
 	return &Client{
+		InfoLogger:  log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile),
 		ErrorLogger: log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile),
 		HTTPClient: &http.Client{
 			Timeout: httpClientTimeout,
@@ -86,7 +90,7 @@ func (client *Client) Send(request *Request, ctx context.Context) (*Response, er
 
 	client.ctx = ctx
 
-	if client.InfoLogger != nil {
+	if client.debugMode {
 		var headerString string
 		if headerBytes, err := json.Marshal(request.HttpRequest.Header); err != nil {
 			headerString = "Could not Marshal Request Headers"
@@ -117,7 +121,7 @@ func (client *Client) Send(request *Request, ctx context.Context) (*Response, er
 		ReceivedAt: time.Now(),
 	}
 
-	if client.InfoLogger != nil {
+	if client.debugMode {
 		var elapsedDuration time.Duration
 		elapsedDuration = response.ReceivedAt.Sub(request.SentAt)
 
@@ -185,6 +189,22 @@ func (client *Client) fillHttpRequest(r *Request) (err error) {
 	// Use context if it was specified
 	if client.ctx != nil {
 		r.HttpRequest = r.HttpRequest.WithContext(client.ctx)
+	}
+
+	if client.debugMode {
+		hostStat, _ := host.Info()
+		cpuStat, _ := cpu.Info()
+
+		infoString := fmt.Sprintf("%v/%v; %v; %v; %v",
+			ClientName,
+			ClientVersion,
+			hostStat.Platform,
+			cpuStat[0].ModelName,
+			hostStat.Hostname,
+		)
+		if err == nil {
+			r.HttpRequest.Header.Set("User-Agent", infoString)
+		}
 	}
 
 	if err != nil {

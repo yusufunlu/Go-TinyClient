@@ -358,7 +358,7 @@ func TestGet(t *testing.T) {
 
 	client := tiny.NewClient().SetTimeout(30)
 
-	request := client.NewRequest().SetBody(desiredResult).SetURL(url).SetMethod("GET")
+	request := client.NewRequest().SetURL(url).SetMethod("GET")
 	request.AddHeaders(map[string]string{"Test-Header": "this is a test"})
 	request.SetContentType("application/json; charset=utf-8")
 
@@ -414,6 +414,43 @@ func TestGetQueryParams(t *testing.T) {
 		AddQueryParams(map[string]string{"param2": "value2", "param3": "value3"})
 
 	request.QueryParams["param4"] = "value4"
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	response, err := client.Send(request, ctx)
+
+	require.NoError(t, err)
+	require.Equal(t, 200, response.Response.StatusCode)
+}
+
+func TestGetDebugMode(t *testing.T) {
+
+	// Start a local HTTP server
+	server := httptest.NewServer(
+		http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			// Test request
+			require.Equal(t, req.URL.String(), "/get")
+			require.Equal(t, req.Method, "GET")
+			require.Equal(t, req.Header.Get(tiny.ContentType), tiny.JsonContentType)
+			require.Equal(t, req.Header.Get("Test-Header"), "this is a test")
+
+			rw.Header().Set("Content-Type", "application/json")
+
+			_, err := rw.Write([]byte(desiredData))
+			require.NoError(t, err)
+		}),
+	)
+	defer server.Close()
+
+	url := fmt.Sprintf("%s/get", server.URL)
+
+	client := tiny.NewClient().SetTimeout(30)
+	client.SetDebugMode(true)
+
+	request := client.NewRequest().SetURL(url).SetMethod("GET")
+	request.AddHeaders(map[string]string{"Test-Header": "this is a test"})
+	request.SetContentType("application/json; charset=utf-8")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
