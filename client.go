@@ -12,9 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"reflect"
 	"regexp"
-	"strings"
 	"time"
 )
 
@@ -27,21 +25,22 @@ var (
 	jsonCheck = regexp.MustCompile(`(?i:(application|text)/(json|.*\+json|json\-.*)(;|$))`)
 )
 
+const (
+	ClientVersion     = "1.0.0"
+	httpClientTimeout = 15 * time.Second
+)
+
 type Client struct {
 	HTTPClient  *http.Client // The HTTP client to send requests on.
 	Cookies     []*http.Cookie
 	ctx         context.Context
 	InfoLogger  *log.Logger
 	ErrorLogger *log.Logger
+	debugMode   bool
 }
 
-const (
-	ClientVersion     = "1.0.0"
-	httpClientTimeout = 15 * time.Second
-)
-
-// CreateClient creates a new TinyClient object.
-func CreateClient() *Client {
+// NewClient creates a new TinyClient object.
+func NewClient() *Client {
 	return &Client{
 		ErrorLogger: log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile),
 		HTTPClient: &http.Client{
@@ -69,9 +68,14 @@ func (client *Client) NewRequest() *Request {
 	}
 }
 
+func (client *Client) SetDebugMode(debugMode bool) {
+	client.debugMode = debugMode
+}
+
 func (client *Client) Send(request *Request, ctx context.Context) (*Response, error) {
 
-	client.parseRequestBody(request)
+	request.parseRequestBody()
+
 	client.fillHttpRequest(request)
 
 	if request.HttpRequest.ContentLength > 0 && request.HttpRequest.GetBody == nil {
@@ -146,35 +150,6 @@ func (client *Client) Send(request *Request, ctx context.Context) (*Response, er
 	return response, nil
 }
 
-//parseRequestBody logics can't be in Request because of checking contentType
-func (client *Client) parseRequestBody(r *Request) (err error) {
-	contentType := r.Headers[ContentType]
-	if r.Body == nil {
-		return
-	}
-	kind := reflect.TypeOf(r.Body).Kind()
-
-	//http.Request.Body is io.ReadCloser and implements io.Reader too
-	//a server can put http.Request.Body into Request.Body
-	//it can be any other stream too
-	if reader, ok := r.Body.(io.Reader); ok {
-		r.bodyBytes, err = io.ReadAll(reader)
-	} else if b, ok := r.Body.([]byte); ok {
-		r.bodyBytes = b
-	} else if s, ok := r.Body.(string); ok {
-		r.bodyBytes = []byte(s)
-	} else if IsJSONType(contentType) &&
-		(kind == reflect.Struct || kind == reflect.Map || kind == reflect.Slice) {
-		b, err := json.Marshal(r.Body)
-		r.bodyBytes = b
-		if err != nil {
-			return err
-		}
-	}
-
-	return
-}
-
 func (client *Client) fillHttpRequest(r *Request) (err error) {
 
 	r.SentAt = time.Now()
@@ -184,14 +159,14 @@ func (client *Client) fillHttpRequest(r *Request) (err error) {
 	r.HttpRequest.ContentLength = int64(len(r.bodyBytes))
 
 	// Set request URL
-	URL, err := client.generateURL(r.URL, r.useSSL)
+	URL, err := r.generateURL(r.URL, r.useSSL)
 	if err != nil {
 		return err
 	}
 	r.HttpRequest.URL = URL
 
 	// Set request method
-	r.HttpRequest.Method = r.Method
+	r.HttpRequest.Method = string(r.Method)
 	// Add headers into http request
 	for key, value := range r.Headers {
 		r.HttpRequest.Header.Set(key, value)
@@ -227,34 +202,6 @@ func (client *Client) fillHttpRequest(r *Request) (err error) {
 	return
 }
 
-// IsJSONType method is to check JSON content type or not
-func IsJSONType(ct string) bool {
-	return jsonCheck.MatchString(ct)
-}
-
-func (client *Client) generateURL(address string, useSSL bool) (*url.URL, error) {
-	v := strings.ToLower(address)
-	if strings.HasPrefix(v, "http://") {
-		address = strings.TrimPrefix(address, "http://")
-	} else if strings.HasPrefix(v, "https://") {
-		address = strings.TrimPrefix(address, "https://")
-	}
-
-	// Generate prefix
-	prefix := "http://"
-	if useSSL {
-		prefix = "https://"
-	}
-
-	// Merge prefix and URL
-	URL := prefix + address
-
-	// Parse URL
-	parsedURL, err := url.Parse(URL)
-	if err != nil {
-		client.ErrorLogger.Println(err)
-		return nil, err
-	}
-
-	return parsedURL, nil
+func IsJSONType(isJsonString string) bool {
+	return jsonCheck.MatchString(isJsonString)
 }

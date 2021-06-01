@@ -7,13 +7,12 @@ import (
 	"time"
 )
 
-// Response struct holds response values of executed request.
+// Response is a wrapper of http.Response which provide some extra features
 type Response struct {
 	client     *Client
 	Request    *Request
 	Response   *http.Response
 	bodyBytes  []byte
-	size       int64
 	ReceivedAt time.Time
 }
 

@@ -2,12 +2,14 @@
 
 #Features
 * Support body in string,[]byte,io.Reader,io.ReadCloser,map,slice or struct types
-* Support redirection
-* Not yet logger injection
-* Not yet default logger for request and response
+* Support of redirection
+* Support of logger injection
+* Support of default error logger which can be overridden 
 * Not yet auto user-agent info filling
-* Support XML as body
-* 
+* No Support XML as body, you can still send as []byte or string
+* No Support Formdata, you can still configure your http.Request via request.HttpRequest
+* No User agent info
+* cert support
 
 
 
