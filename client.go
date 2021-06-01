@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"reflect"
 	"regexp"
 	"strings"
@@ -25,14 +25,14 @@ var (
 	formContentType = "application/x-www-form-urlencoded"
 
 	jsonCheck = regexp.MustCompile(`(?i:(application|text)/(json|.*\+json|json\-.*)(;|$))`)
-	xmlCheck  = regexp.MustCompile(`(?i:(application|text)/(xml|.*\+xml)(;|$))`)
 )
 
 type Client struct {
-	HTTPClient *http.Client // The HTTP client to send requests on.
-	DebugLog   *log.Logger  // Optional logger for debugging purposes.
-	Cookies    []*http.Cookie
-	ctx        context.Context
+	HTTPClient  *http.Client // The HTTP client to send requests on.
+	Cookies     []*http.Cookie
+	ctx         context.Context
+	InfoLogger  *log.Logger
+	ErrorLogger *log.Logger
 }
 
 const (
@@ -43,6 +43,7 @@ const (
 // CreateClient creates a new TinyClient object.
 func CreateClient() *Client {
 	return &Client{
+		ErrorLogger: log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile),
 		HTTPClient: &http.Client{
 			Timeout: httpClientTimeout,
 		},
@@ -57,6 +58,7 @@ func (client *Client) SetTimeout(timeout time.Duration) *Client {
 // newRequest method creates a new request instance, it will be used for Get, Post, Put, Delete, Patch, Head, Options, etc.
 func (client *Client) NewRequest() *Request {
 	return &Request{
+		client:      client,
 		QueryParams: map[string]string{},
 		Headers:     map[string]string{},
 		Cookies:     make([]*http.Cookie, 0),
@@ -69,14 +71,35 @@ func (client *Client) NewRequest() *Request {
 
 func (client *Client) Send(request *Request, ctx context.Context) (*Response, error) {
 
-	parseRequestBody(request)
+	client.parseRequestBody(request)
 	client.fillHttpRequest(request)
 
 	if request.HttpRequest.ContentLength > 0 && request.HttpRequest.GetBody == nil {
-		return nil, errors.New("request.GetBody cannot be nil because it prevents redirection when content length>0")
+		err := errors.New("request.GetBody cannot be nil because it prevents redirection when content length>0")
+		client.ErrorLogger.Println(err)
+		return nil, err
 	}
 
 	client.ctx = ctx
+
+	if client.InfoLogger != nil {
+		var headerString string
+		if headerBytes, err := json.Marshal(request.HttpRequest.Header); err != nil {
+			headerString = "Could not Marshal Request Headers"
+		} else {
+			headerString = string(headerBytes)
+		}
+
+		requestLogString :=
+			"\n==============================================================================\n" +
+				"~~~ HTTP REQUEST ~~~\n" +
+				fmt.Sprintf("%s  %s\n", request.HttpRequest.Method, request.HttpRequest.URL) +
+				fmt.Sprintf("HOST   : %s\n", request.HttpRequest.URL.Host) +
+				fmt.Sprintf("HEADERS:\n%s\n", headerString) +
+				fmt.Sprintf("BODY   :\n%v\n", string(request.bodyBytes)) +
+				"==============================================================================\n"
+		client.InfoLogger.Printf(requestLogString)
+	}
 
 	res, err := client.HTTPClient.Do(request.HttpRequest)
 
@@ -87,21 +110,53 @@ func (client *Client) Send(request *Request, ctx context.Context) (*Response, er
 	response := &Response{
 		Response:   res,
 		Request:    request,
-		receivedAt: time.Now(),
+		ReceivedAt: time.Now(),
+	}
+
+	if client.InfoLogger != nil {
+		var elapsedDuration time.Duration
+		elapsedDuration = response.ReceivedAt.Sub(request.SentAt)
+
+		var responseHeaderString string
+		if headerBytes, err := json.Marshal(res.Header); err != nil {
+			responseHeaderString = "Could not Marshal Req Headers"
+		} else {
+			responseHeaderString = string(headerBytes)
+		}
+
+		responseBytes, err := response.ReadBody()
+		if err != nil {
+			return nil, err
+		}
+
+		responseLogString :=
+			"\n==============================================================================\n" +
+				"~~~ HTTP RESPONSE ~~~\n" +
+				fmt.Sprintf("STATUS       : %s\n", res.Status) +
+				fmt.Sprintf("PROTO        : %s\n", res.Proto) +
+				fmt.Sprintf("RECEIVED AT  : %v\n", response.ReceivedAt) +
+				fmt.Sprintf("TIME DURATION: %v\n", elapsedDuration) +
+				fmt.Sprintf("RESPONSE BODY: %v\n", string(responseBytes)) +
+				fmt.Sprintf("HEADERS:\n%s\n", responseHeaderString) +
+				"==============================================================================\n"
+
+		client.InfoLogger.Printf(responseLogString)
 	}
 
 	return response, nil
 }
 
 //parseRequestBody logics can't be in Request because of checking contentType
-func parseRequestBody(r *Request) (err error) {
+func (client *Client) parseRequestBody(r *Request) (err error) {
 	contentType := r.Headers[ContentType]
 	if r.Body == nil {
 		return
 	}
 	kind := reflect.TypeOf(r.Body).Kind()
 
-	//reader case can be used for sending received request to another server
+	//http.Request.Body is io.ReadCloser and implements io.Reader too
+	//a server can put http.Request.Body into Request.Body
+	//it can be any other stream too
 	if reader, ok := r.Body.(io.Reader); ok {
 		r.bodyBytes, err = io.ReadAll(reader)
 	} else if b, ok := r.Body.([]byte); ok {
@@ -115,32 +170,21 @@ func parseRequestBody(r *Request) (err error) {
 		if err != nil {
 			return err
 		}
-	} else if IsXMLType(contentType) && (kind == reflect.Struct) {
-		b, err = xml.Marshal(r.Body)
-		r.bodyBytes = b
-		if err != nil {
-			return
-		}
 	}
-
-	fmt.Println("request body bytes: ", string(r.bodyBytes))
 
 	return
 }
 
 func (client *Client) fillHttpRequest(r *Request) (err error) {
 
+	r.SentAt = time.Now()
 	//Set request Body
 	r.HttpRequest.Body = ioutil.NopCloser(bytes.NewReader(r.bodyBytes))
-	r.HttpRequest.Body = ioutil.NopCloser(bytes.NewBuffer(r.bodyBytes))
-	//redirection need reading the body more than once
-	r.HttpRequest.GetBody = func() (io.ReadCloser, error) {
-		return ioutil.NopCloser(strings.NewReader("deneme")), nil
-	}
+
 	r.HttpRequest.ContentLength = int64(len(r.bodyBytes))
 
 	// Set request URL
-	URL, err := GenerateURL(r.URL, r.useSSL)
+	URL, err := client.generateURL(r.URL, r.useSSL)
 	if err != nil {
 		return err
 	}
@@ -172,7 +216,7 @@ func (client *Client) fillHttpRequest(r *Request) (err error) {
 		return err
 	}
 
-	// assign get body func for the underlying raw request instance
+	//redirection needs reading the body more than once
 	r.HttpRequest.GetBody = func() (io.ReadCloser, error) {
 		if r.bodyBytes != nil {
 			return ioutil.NopCloser(bytes.NewReader(r.bodyBytes)), nil
@@ -188,12 +232,7 @@ func IsJSONType(ct string) bool {
 	return jsonCheck.MatchString(ct)
 }
 
-// IsXMLType method is to check XML content type or not
-func IsXMLType(ct string) bool {
-	return xmlCheck.MatchString(ct)
-}
-
-func GenerateURL(address string, useSSL bool) (*url.URL, error) {
+func (client *Client) generateURL(address string, useSSL bool) (*url.URL, error) {
 	v := strings.ToLower(address)
 	if strings.HasPrefix(v, "http://") {
 		address = strings.TrimPrefix(address, "http://")
@@ -213,20 +252,9 @@ func GenerateURL(address string, useSSL bool) (*url.URL, error) {
 	// Parse URL
 	parsedURL, err := url.Parse(URL)
 	if err != nil {
-		//logger.Errorf("URL parsing error: %s, %v", URL, err)
+		client.ErrorLogger.Println(err)
 		return nil, err
 	}
 
 	return parsedURL, nil
-}
-
-// ReadBody reads already set bodyBytes field from Request which is wrapper of *http.Request
-func (r *Request) ReadBody() ([]byte, error) {
-
-	if len(r.bodyBytes) != 0 {
-		return r.bodyBytes, nil
-	}
-
-	err := errors.New("bodyBytes is empty")
-	return nil, err
 }

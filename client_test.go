@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"runtime"
 	"strings"
@@ -232,9 +234,7 @@ func TestPostRedirect(t *testing.T) {
 		http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			// Test request
 			require.Equal(t, req.URL.String(), "/post")
-			require.Equal(t, req.Method, "POST")
 			require.Equal(t, req.Header.Get("Content-Type"), "application/json; charset=utf-8")
-			require.Equal(t, req.Header.Get("Test-Header"), "this is a test")
 
 			rw.Header().Set("Content-Type", req.Header.Get("Content-Type"))
 
@@ -275,6 +275,68 @@ func TestPostRedirect(t *testing.T) {
 
 	fmt.Println(string(resultBody))
 
+}
+
+func TestPostLoggerInject(t *testing.T) {
+
+	// Start a local HTTP server
+	server := httptest.NewServer(
+		http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			time.Sleep(time.Second * 5)
+			// Test request
+			require.Equal(t, req.URL.String(), "/post")
+			require.Equal(t, req.Method, "POST")
+			require.Equal(t, req.Header.Get("Content-Type"), "application/json; charset=utf-8")
+			require.Equal(t, req.Header.Get("Test-Header"), "this is a test")
+
+			rw.Header().Set("Content-Type", req.Header.Get("Content-Type"))
+
+			b, _ := ioutil.ReadAll(req.Body)
+
+			fmt.Println("request body: ", string(b))
+
+			_, err := rw.Write(b)
+			require.NoError(t, err)
+		}),
+	)
+	defer server.Close()
+
+	url := fmt.Sprintf("%s/post", server.URL)
+
+	infoLog, err := os.OpenFile("infos.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Fatal(err)
+	}
+	//errorLog, err := os.OpenFile("errors.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Fatal(err)
+	}
+	infoLogger := log.New(infoLog, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
+	//errorLogger:= log.New(errorLog, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
+
+	client := tiny.CreateClient().SetTimeout(30)
+	client.InfoLogger = infoLogger
+	//client.ErrorLogger = errorLogger
+
+	request := client.NewRequest().SetBody(desiredData).SetURL(url).SetMethod("POST")
+	request.SetHeaders(map[string]string{"Test-Header": "this is a test"})
+	request.SetContentType("application/json; charset=utf-8")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		time.Sleep(time.Second * 2)
+		println("Cancel")
+		cancel()
+	}()
+
+	response, err := client.Send(request, ctx)
+
+	require.NoError(t, err)
+	require.Equal(t, 200, response.Response.StatusCode)
+	resultBody, err := response.ReadBody()
+	require.Equal(t, string(resultBody), desiredData)
 }
 
 func TestGet(t *testing.T) {

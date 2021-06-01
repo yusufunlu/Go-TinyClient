@@ -9,11 +9,12 @@ import (
 
 // Response struct holds response values of executed request.
 type Response struct {
+	client     *Client
 	Request    *Request
 	Response   *http.Response
 	bodyBytes  []byte
 	size       int64
-	receivedAt time.Time
+	ReceivedAt time.Time
 }
 
 // ReadBody reads the http.Response bodyBytes and assigns it to the r.Body
