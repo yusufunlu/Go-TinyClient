@@ -3,6 +3,7 @@ package tinyclient
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -44,11 +45,16 @@ type Client struct {
 
 // NewClient creates a new TinyClient object.
 func NewClient() *Client {
+	transport := http.DefaultTransport.(*http.Transport)
+	transport.TLSClientConfig = &tls.Config{
+		InsecureSkipVerify: true,
+	}
 	return &Client{
 		InfoLogger:  log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile),
 		ErrorLogger: log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile),
 		HTTPClient: &http.Client{
-			Timeout: httpClientTimeout,
+			Timeout:   httpClientTimeout,
+			Transport: transport,
 		},
 	}
 }
@@ -163,7 +169,7 @@ func (client *Client) fillHttpRequest(r *Request) (err error) {
 	r.HttpRequest.ContentLength = int64(len(r.bodyBytes))
 
 	// Set request URL
-	URL, err := r.generateURL(r.URL, r.useSSL)
+	URL, err := r.generateURL()
 	if err != nil {
 		return err
 	}

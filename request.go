@@ -127,17 +127,17 @@ func (request *Request) parseRequestBody() (err error) {
 	return
 }
 
-func (request *Request) generateURL(address string, useSSL bool) (*url.URL, error) {
-	v := strings.ToLower(address)
+func (request *Request) generateURL() (*url.URL, error) {
+	v := strings.ToLower(request.URL)
 	if strings.HasPrefix(v, "http://") {
-		address = strings.TrimPrefix(address, "http://")
+		request.URL = strings.TrimPrefix(request.URL, "http://")
 	} else if strings.HasPrefix(v, "https://") {
-		address = strings.TrimPrefix(address, "https://")
+		request.URL = strings.TrimPrefix(request.URL, "https://")
 	}
 
 	// Generate prefix
 	prefix := "http://"
-	if useSSL {
+	if request.useSSL {
 		prefix = "https://"
 	}
 
@@ -147,11 +147,11 @@ func (request *Request) generateURL(address string, useSSL bool) (*url.URL, erro
 		for key, value := range request.QueryParams {
 			params.Add(key, value)
 		}
-		address = address + "?" + params.Encode()
+		request.URL = request.URL + "?" + params.Encode()
 	}
 
 	// Merge prefix and URL
-	URL := prefix + address
+	URL := prefix + request.URL
 
 	// Parse URL
 	parsedURL, err := url.Parse(URL)
