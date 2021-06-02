@@ -84,7 +84,7 @@ type errorResponse struct {
 func TestPostSuccess(t *testing.T) {
 
 	account := Account{}
-	jsonFile, err := os.Open("account-post-data.json")
+	jsonFile, err := os.Open("./testdata/account-post-data.json")
 	if err != nil {
 		fmt.Println(err)
 	}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -110,7 +111,7 @@ func (request *Request) parseRequestBody() (err error) {
 	//a server can put http.Request.Body into Request.Body
 	//it can be any other stream too
 	if reader, ok := request.Body.(io.Reader); ok {
-		request.bodyBytes, err = io.ReadAll(reader)
+		request.bodyBytes, err = ioutil.ReadAll(reader)
 	} else if b, ok := request.Body.([]byte); ok {
 		request.bodyBytes = b
 	} else if s, ok := request.Body.(string); ok {
