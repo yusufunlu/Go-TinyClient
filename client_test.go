@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -16,8 +17,6 @@ import (
 	"testing"
 	"time"
 	tiny "tinyclient"
-
-	"github.com/stretchr/testify/require"
 )
 
 var desiredData = `{"success": true,"data": "done!"}`
@@ -27,7 +26,7 @@ func TestPostString(t *testing.T) {
 	// Start a local HTTP server
 	server := httptest.NewServer(
 		http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			time.Sleep(time.Second * 5)
+			time.Sleep(time.Second * 2)
 			// Test request
 			require.Equal(t, req.URL.String(), "/post")
 			require.Equal(t, req.Method, "POST")
@@ -37,8 +36,6 @@ func TestPostString(t *testing.T) {
 			rw.Header().Set("Content-Type", req.Header.Get("Content-Type"))
 
 			b, _ := ioutil.ReadAll(req.Body)
-
-			fmt.Println("request body: ", string(b))
 
 			_, err := rw.Write(b)
 			require.NoError(t, err)
@@ -57,11 +54,8 @@ func TestPostString(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go func() {
-		time.Sleep(time.Second * 2)
-		println("Cancel")
-		cancel()
-	}()
+	time.Sleep(time.Second * 1)
+	cancel()
 
 	response, err := client.Send(request, ctx)
 
@@ -85,8 +79,6 @@ func TestPostByte(t *testing.T) {
 			rw.Header().Set("Content-Type", req.Header.Get("Content-Type"))
 
 			b, _ := ioutil.ReadAll(req.Body)
-
-			fmt.Println("request body: ", string(b))
 
 			_, err := rw.Write(b)
 			require.NoError(t, err)
@@ -129,7 +121,6 @@ func TestPostReader(t *testing.T) {
 
 			b, _ := ioutil.ReadAll(req.Body)
 			req.Body.Close()
-			fmt.Println("request body: ", string(b))
 
 			_, err := rw.Write(b)
 			require.NoError(t, err)
@@ -172,7 +163,6 @@ func TestPostJSONMapSuccess(t *testing.T) {
 
 			b, _ := ioutil.ReadAll(req.Body)
 			req.Body.Close()
-			fmt.Println("request body: ", string(b))
 
 			_, err := rw.Write(b)
 			require.NoError(t, err)
@@ -202,7 +192,7 @@ func TestPostJSONMapSuccess(t *testing.T) {
 	require.Equal(t, string(resultBody), string(requestBodyString))
 }
 
-func TestPostHTTPBinAdressSuccess(t *testing.T) {
+func TestPostExternalAdressSuccess(t *testing.T) {
 
 	url := "https://httpbin.org/post"
 
@@ -218,10 +208,6 @@ func TestPostHTTPBinAdressSuccess(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, 200, response.Response.StatusCode)
-
-	resultBody, err := response.ReadBody()
-
-	fmt.Println(string(resultBody))
 }
 
 func RedirectHandler(w http.ResponseWriter, r *http.Request) {
@@ -230,18 +216,19 @@ func RedirectHandler(w http.ResponseWriter, r *http.Request) {
 
 func TestPostRedirect(t *testing.T) {
 
+	subPath := "/redirection/sub"
+
 	// Start a local HTTP server
 	server := httptest.NewServer(
 		http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			// Test request
-			require.Equal(t, req.URL.String(), "/post")
+			require.Equal(t, req.URL.String(), subPath)
 			require.Equal(t, req.Header.Get("Content-Type"), "application/json; charset=utf-8")
 
 			rw.Header().Set("Content-Type", req.Header.Get("Content-Type"))
 
 			b, _ := ioutil.ReadAll(req.Body)
 			req.Body.Close()
-			fmt.Println("request body: ", string(b))
 
 			_, err := rw.Write(b)
 			require.NoError(t, err)
@@ -253,12 +240,11 @@ func TestPostRedirect(t *testing.T) {
 	redirectServer := httptest.NewServer(
 		http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			http.Redirect(rw, req, server.URL+req.RequestURI, http.StatusFound)
-
 		}),
 	)
 	defer redirectServer.Close()
 
-	url := fmt.Sprintf("%s/post", redirectServer.URL)
+	url := fmt.Sprintf("%v%v", redirectServer.URL, subPath)
 
 	client := tiny.NewClient().SetTimeout(30)
 	request := client.NewRequest().SetURL(url).SetMethod("POST")
@@ -271,11 +257,6 @@ func TestPostRedirect(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, 200, response.Response.StatusCode)
-
-	resultBody, err := response.ReadBody()
-
-	fmt.Println(string(resultBody))
-
 }
 
 func TestPostLoggerInject(t *testing.T) {
@@ -446,7 +427,6 @@ func TestGetDebugMode(t *testing.T) {
 	url := fmt.Sprintf("%s/get", server.URL)
 
 	client := tiny.NewClient().SetTimeout(30)
-	client.SetDebugMode(true)
 
 	request := client.NewRequest().SetURL(url).SetMethod("GET")
 	request.AddHeaders(map[string]string{"Test-Header": "this is a test"})
