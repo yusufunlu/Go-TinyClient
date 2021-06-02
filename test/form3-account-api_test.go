@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	baseUrl     = "localhost:8080/v1"
+	baseUrl     = "accountapi:8080/v1"
 	accountPath = "/organisation/accounts"
 )
 
@@ -116,7 +116,16 @@ func TestPostSuccess(t *testing.T) {
 }
 
 func TestFetchSuccess(t *testing.T) {
-	id := "07675eaf-1944-4073-8eb5-d2cef32b94df"
+	account := Account{}
+	jsonFile, err := os.Open("./testdata/account-post-data.json")
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer jsonFile.Close()
+	accountBytes, _ := ioutil.ReadAll(jsonFile)
+	json.Unmarshal(accountBytes, &account)
+
+	id:=account.Data.ID
 
 	url := fmt.Sprintf("%s%s/%s", baseUrl, accountPath, id)
 	client := tiny.NewClient().SetTimeout(30)
@@ -138,7 +147,16 @@ func TestFetchSuccess(t *testing.T) {
 }
 
 func TestFetchFail(t *testing.T) {
-	id := "07675eaf-1944-4073-8eb5-d2cef32b94df-fail"
+	account := Account{}
+	jsonFile, err := os.Open("./testdata/account-post-data.json")
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer jsonFile.Close()
+	accountBytes, _ := ioutil.ReadAll(jsonFile)
+	json.Unmarshal(accountBytes, &account)
+
+	id:=account.Data.ID
 
 	url := fmt.Sprintf("%s%s/%s", baseUrl, accountPath, id)
 	client := tiny.NewClient().SetTimeout(30)

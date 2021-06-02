@@ -1,7 +1,7 @@
 {
   "data": {
-    "id": "{{random_guid}}",
-    "organisation_id": "{{organisation_id}}",
+    "id": "d498c8fb-ee18-4985-9c17-e40cc615fa2c",
+    "organisation_id": "b54d4537-e419-49fc-ac81-9c923a9cc180",
     "type": "accounts",
     "attributes": {
       "country": "GB",

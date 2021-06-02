@@ -7,7 +7,7 @@ ENV GO111MODULE=on \
     GOARCH=amd64
 
 # Move to working directory /build
-WORKDIR /build
+WORKDIR /tinyclientcodes
 
 # Copy and download dependency using go mod
 COPY go.mod .
@@ -17,14 +17,4 @@ RUN go mod download
 # Copy the code into the container
 COPY . .
 
-# Run test
-RUN go test ./...
-
-# Build the application
-RUN go build -o main .
-
-# Move to /dist directory as the place for resulting binary folder
-WORKDIR /dist
-
-# Copy binary from build to main folder
-RUN cp /build/main .
+ENTRYPOINT ["go", "test", "-v", "./...", "-coverprofile", "cover.out"]
