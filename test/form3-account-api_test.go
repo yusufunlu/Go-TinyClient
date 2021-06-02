@@ -94,12 +94,11 @@ func TestPostSuccess(t *testing.T) {
 
 	id := uuid.NewV4()
 	organisationId := uuid.NewV4()
-	fmt.Println("id and org id", id, "  ", organisationId)
 	account.Data.ID = id.String()
 	account.Data.OrganisationID = organisationId.String()
 
 	url := fmt.Sprintf("%s%s", baseUrl, accountPath)
-	client := tiny.NewClient().SetTimeout(30).SetDebugMode(true)
+	client := tiny.NewClient().SetTimeout(30)
 
 	request := client.NewRequest().SetURL(url).SetBody(account).SetMethod(tiny.Post).
 		SetContentType("application/json; charset=utf-8")
@@ -142,7 +141,7 @@ func TestFetchFail(t *testing.T) {
 	id := "07675eaf-1944-4073-8eb5-d2cef32b94df-fail"
 
 	url := fmt.Sprintf("%s%s/%s", baseUrl, accountPath, id)
-	client := tiny.NewClient().SetTimeout(30).SetDebugMode(true)
+	client := tiny.NewClient().SetTimeout(30)
 
 	request := client.NewRequest().SetURL(url).SetMethod(tiny.Get).
 		SetContentType("application/json; charset=utf-8")

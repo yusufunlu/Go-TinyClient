@@ -1,7 +1,4 @@
 version: '3'
-networks:
-  isolation-network:
-    driver: bridge
 
 services:
   accountapi:
@@ -24,6 +21,8 @@ services:
       - DATABASE-PASSWORD=123
     ports:
       - 8080:8080
+    networks:
+      - my-net
   postgresql:
     image: postgres:9.5-alpine
     healthcheck:
@@ -36,14 +35,28 @@ services:
       - POSTGRES_USER=root
       - POSTGRES_PASSWORD=password
     volumes:
-      - ./scripts/db:/docker-entrypoint-initdb.d/
+      - ./test/scripts/db:/docker-entrypoint-initdb.d/
+    ports:
+      - "5432:5432"
 
   vault:
-    image: vault:1.6.3
+    image: vault:0.9.3
     environment:
       - SKIP_SETCAP=1
       - VAULT_DEV_ROOT_TOKEN_ID=8fb95528-57c6-422e-9722-d2147bcba8ed
-  tests:
+  integration-tests:
+    container_name: integration-tests
     build: .
+    depends_on:
+      - accountapi
+      - postgresql
+      - vault
     ports:
-      - "8081:8080"
+      - "8080:8080"
+    restart: always
+    networks:
+      - my-net
+
+networks:
+  my-net:
+    driver: bridge

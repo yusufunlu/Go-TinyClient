@@ -1,0 +1,1 @@
+ docker exec -it interview-accountapi_postgresql_1 psql -U interview_accountapi_user interview_accountapi
