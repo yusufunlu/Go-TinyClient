@@ -78,8 +78,9 @@ func (client *Client) NewRequest() *Request {
 	}
 }
 
-func (client *Client) SetDebugMode(debugMode bool) {
+func (client *Client) SetDebugMode(debugMode bool) *Client {
 	client.debugMode = debugMode
+	return client
 }
 
 func (client *Client) Send(request *Request, ctx context.Context) (*Response, error) {

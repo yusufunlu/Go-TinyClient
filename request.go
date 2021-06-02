@@ -115,15 +115,19 @@ func (request *Request) parseRequestBody() (err error) {
 		request.bodyBytes = b
 	} else if s, ok := request.Body.(string); ok {
 		request.bodyBytes = []byte(s)
-	} else if IsJSONType(contentType) &&
-		(kind == reflect.Struct || kind == reflect.Map || kind == reflect.Slice) {
-		b, err := json.Marshal(request.Body)
-		request.bodyBytes = b
-		if err != nil {
+	} else if IsJSONType(contentType) {
+		if kind == reflect.Struct || kind == reflect.Map || kind == reflect.Slice {
+			b, err := json.Marshal(request.Body)
+			request.bodyBytes = b
+			if err != nil {
+				return err
+			}
+		} else if kind == reflect.Ptr {
+			err := errors.New("Request body is pointer which we don't support now, please use value at the pointer as body")
+			request.client.ErrorLogger.Println(err)
 			return err
 		}
 	}
-
 	return
 }
 
