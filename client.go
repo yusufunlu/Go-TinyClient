@@ -43,6 +43,11 @@ type Client struct {
 	debugMode   bool
 }
 
+func (client *Client) SetContext(ctx context.Context) *Client {
+	client.ctx = ctx
+	return client
+}
+
 // NewClient creates a new TinyClient object.
 func NewClient() *Client {
 	transport := http.DefaultTransport.(*http.Transport)
@@ -83,7 +88,7 @@ func (client *Client) SetDebugMode(debugMode bool) *Client {
 	return client
 }
 
-func (client *Client) Send(request *Request, ctx context.Context) (*Response, error) {
+func (client *Client) Send(request *Request) (*Response, error) {
 
 	request.parseRequestBody()
 
@@ -94,8 +99,6 @@ func (client *Client) Send(request *Request, ctx context.Context) (*Response, er
 		client.ErrorLogger.Println(err)
 		return nil, err
 	}
-
-	client.ctx = ctx
 
 	if client.debugMode {
 		var headerString string

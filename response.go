@@ -61,7 +61,7 @@ func (response *Response) ReadBody() ([]byte, error) {
 
 }
 
-func (response *Response) BodyToStruct(v interface{}) error {
+func (response *Response) BodyUnmarshall(v interface{}) error {
 	resBody, err := response.ReadBody()
 	if err != nil {
 		return err

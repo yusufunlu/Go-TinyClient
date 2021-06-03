@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/require"
+	tiny "github.com/yusufunlu/tinyclient"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -16,7 +17,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	tiny "github.com/yusufunlu/tinyclient"
 )
 
 var desiredData = `{"success": true,"data": "done!"}`
@@ -51,13 +51,7 @@ func TestPostString(t *testing.T) {
 	request.AddHeaders(map[string]string{"Test-Header": "this is a test"})
 	request.SetContentType("application/json; charset=utf-8")
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	time.Sleep(time.Second * 1)
-	cancel()
-
-	response, err := client.Send(request, ctx)
+	response, err := client.Send(request)
 
 	require.NoError(t, err)
 	require.Equal(t, 200, response.Response.StatusCode)
@@ -95,10 +89,7 @@ func TestPostByte(t *testing.T) {
 	request.AddHeaders(map[string]string{"Test-Header": "this is a test"})
 	request.SetContentType("application/json; charset=utf-8")
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	response, err := client.Send(request, ctx)
+	response, err := client.Send(request)
 
 	require.NoError(t, err)
 	require.Equal(t, 200, response.Response.StatusCode)
@@ -137,10 +128,7 @@ func TestPostReader(t *testing.T) {
 	request.AddHeaders(map[string]string{"Test-Header": "this is a test"})
 	request.SetContentType("application/json; charset=utf-8")
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	response, err := client.Send(request, ctx)
+	response, err := client.Send(request)
 
 	require.NoError(t, err)
 	require.Equal(t, 200, response.Response.StatusCode)
@@ -179,10 +167,7 @@ func TestPostJSONMapSuccess(t *testing.T) {
 	request.AddHeaders(map[string]string{"Test-Header": "this is a test"})
 	request.SetContentType("application/json; charset=utf-8")
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	response, err := client.Send(request, ctx)
+	response, err := client.Send(request)
 
 	require.NoError(t, err)
 	require.Equal(t, 200, response.Response.StatusCode)
@@ -201,10 +186,7 @@ func TestPostExternalAdressSuccess(t *testing.T) {
 	request := client.NewRequest().SetURL(url).SetMethod("POST")
 	request.SetContentType("application/json; charset=utf-8")
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	response, err := client.Send(request, ctx)
+	response, err := client.Send(request)
 
 	require.NoError(t, err)
 	require.Equal(t, 200, response.Response.StatusCode)
@@ -250,10 +232,7 @@ func TestPostRedirect(t *testing.T) {
 	request := client.NewRequest().SetURL(url).SetMethod("POST")
 	request.SetContentType("application/json; charset=utf-8")
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	response, err := client.Send(request, ctx)
+	response, err := client.Send(request)
 
 	require.NoError(t, err)
 	require.Equal(t, 200, response.Response.StatusCode)
@@ -303,10 +282,7 @@ func TestPostLoggerInject(t *testing.T) {
 	request.AddHeaders(map[string]string{"Test-Header": "this is a test"})
 	request.SetContentType("application/json; charset=utf-8")
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	response, err := client.Send(request, ctx)
+	response, err := client.Send(request)
 
 	require.NoError(t, err)
 	require.Equal(t, 200, response.Response.StatusCode)
@@ -343,10 +319,7 @@ func TestGet(t *testing.T) {
 	request.AddHeaders(map[string]string{"Test-Header": "this is a test"})
 	request.SetContentType("application/json; charset=utf-8")
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	response, err := client.Send(request, ctx)
+	response, err := client.Send(request)
 
 	require.NoError(t, err)
 	require.Equal(t, 200, response.Response.StatusCode)
@@ -396,10 +369,7 @@ func TestGetQueryParams(t *testing.T) {
 
 	request.QueryParams["param4"] = "value4"
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	response, err := client.Send(request, ctx)
+	response, err := client.Send(request)
 
 	require.NoError(t, err)
 	require.Equal(t, 200, response.Response.StatusCode)
@@ -432,11 +402,47 @@ func TestGetDebugMode(t *testing.T) {
 	request.AddHeaders(map[string]string{"Test-Header": "this is a test"})
 	request.SetContentType("application/json; charset=utf-8")
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	response, err := client.Send(request, ctx)
+	response, err := client.Send(request)
 
 	require.NoError(t, err)
 	require.Equal(t, 200, response.Response.StatusCode)
+}
+
+func TestPostCancelled(t *testing.T) {
+
+	// Start a local HTTP server
+	server := httptest.NewServer(
+		http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			time.Sleep(time.Second * 2)
+			// Test request
+			require.Equal(t, req.URL.String(), "/post")
+			require.Equal(t, req.Method, "POST")
+			require.Equal(t, req.Header.Get("Content-Type"), "application/json; charset=utf-8")
+			require.Equal(t, req.Header.Get("Test-Header"), "this is a test")
+
+			rw.Header().Set("Content-Type", req.Header.Get("Content-Type"))
+
+			b, _ := ioutil.ReadAll(req.Body)
+
+			_, err := rw.Write(b)
+			require.NoError(t, err)
+		}),
+	)
+	defer server.Close()
+
+	url := fmt.Sprintf("%s/post", server.URL)
+
+	client := tiny.NewClient().SetTimeout(30)
+
+	request := client.NewRequest().SetBody(desiredData).SetURL(url).SetMethod("POST")
+	request.AddHeaders(map[string]string{"Test-Header": "this is a test"})
+	request.SetContentType("application/json; charset=utf-8")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	client.SetContext(ctx)
+
+	_, err := client.Send(request)
+
+	require.Error(t, err)
 }
