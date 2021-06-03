@@ -21,6 +21,71 @@ import (
 
 var desiredData = `{"success": true,"data": "done!"}`
 
+func TestMethods(t *testing.T) {
+
+	var table = []struct {
+		name string
+	}{
+		{"get"},
+		{"post"},
+		{"put"},
+		{"patch"},
+		{"delete"},
+	}
+
+	// Start a local HTTP server
+	server := httptest.NewServer(
+		http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			switch req.URL.String() {
+			case "/get":
+				t.Log("Get request executed")
+				require.Equal(t, req.Method, "GET")
+			case "/post":
+				t.Log("Post request executed")
+				require.Equal(t, req.Method, "POST")
+			case "/put":
+				t.Log("Put request executed")
+				require.Equal(t, req.Method, "PUT")
+			case "/patch":
+				t.Log("Patch request executed")
+				require.Equal(t, req.Method, "PATCH")
+			case "/delete":
+				t.Log("Delete request executed")
+				require.Equal(t, req.Method, "DELETE")
+			}
+		}),
+	)
+	defer server.Close()
+
+	client := tiny.NewClient()
+
+	for _, row := range table {
+		url := fmt.Sprintf("%s/"+row.name, server.URL)
+		request := client.NewRequest().SetURL(url)
+
+		var err error
+		switch row.name {
+		case "get":
+			request.SetMethod(tiny.Get)
+			_, err = client.Send(request)
+		case "post":
+			request.SetMethod(tiny.Post)
+			_, err = client.Send(request)
+		case "put":
+			request.SetMethod(tiny.Put)
+			_, err = client.Send(request)
+		case "patch":
+			request.SetMethod(tiny.Patch)
+			_, err = client.Send(request)
+		case "delete":
+			request.SetMethod(tiny.Delete)
+			_, err = client.Send(request)
+		}
+		require.NoError(t, err)
+	}
+
+}
+
 func TestPostString(t *testing.T) {
 
 	// Start a local HTTP server

@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 	tiny "github.com/yusufunlu/tinyclient"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"testing"
 )
@@ -76,8 +75,8 @@ type Account struct {
 	} `json:"data"`
 }
 
-type errorResponse struct {
-	error_message string `json:"error_message"`
+type ErrorResponse struct {
+	ErrorMessage string `json:"error_message"`
 }
 
 func readTestData(v interface{}) {
@@ -96,7 +95,7 @@ func TestPostSuccess(t *testing.T) {
 	readTestData(&account)
 
 	url := fmt.Sprintf("%s%s", baseUrl, accountPath)
-	client := tiny.NewClient().SetTimeout(30)
+	client := tiny.NewClient()
 
 	request := client.NewRequest().SetURL(url).SetBody(account).SetMethod(tiny.Post).
 		SetContentType("application/json; charset=utf-8")
@@ -119,7 +118,7 @@ func TestFetchSuccess(t *testing.T) {
 	id := account.Data.ID
 
 	url := fmt.Sprintf("%s%s/%s", baseUrl, accountPath, id)
-	client := tiny.NewClient().SetTimeout(30)
+	client := tiny.NewClient()
 	request := client.NewRequest().SetURL(url).SetMethod(tiny.Get).
 		SetContentType("application/json; charset=utf-8")
 
@@ -141,7 +140,7 @@ func TestFetchFail(t *testing.T) {
 	id := uuid.NewV4().String()
 
 	url := fmt.Sprintf("%s%s/%s", baseUrl, accountPath, id)
-	client := tiny.NewClient().SetTimeout(30)
+	client := tiny.NewClient().SetDebugMode(true)
 
 	request := client.NewRequest().SetURL(url).SetMethod(tiny.Get).
 		SetContentType("application/json; charset=utf-8")
@@ -149,22 +148,12 @@ func TestFetchFail(t *testing.T) {
 	response, err := client.Send(request)
 
 	require.NoError(t, err)
+	require.Equal(t, 404, response.Response.StatusCode)
 
-	require.True(t, response.Response.StatusCode < http.StatusOK || response.Response.StatusCode >= http.StatusBadRequest)
-
-	if response.Response.StatusCode < http.StatusOK || response.Response.StatusCode >= http.StatusBadRequest {
-		var errRes errorResponse
-		err = response.BodyUnmarshall(&errRes)
-		require.NoError(t, err)
-		require.NotNil(t, errRes.error_message)
-		return
-	}
-
-	respAccount := Account{}
-	err = response.BodyUnmarshall(&respAccount)
-
+	errRes := ErrorResponse{}
+	err = response.BodyUnmarshall(&errRes)
 	require.NoError(t, err)
-	require.Equal(t, respAccount.Data.ID, id)
+	require.True(t, len(errRes.ErrorMessage) > 0)
 
 }
 
@@ -175,7 +164,7 @@ func TestDeleteSuccess(t *testing.T) {
 	version := account.Data.Version
 
 	url := fmt.Sprintf("%s%s/%s", baseUrl, accountPath, id)
-	client := tiny.NewClient().SetTimeout(30)
+	client := tiny.NewClient()
 
 	request := client.NewRequest().SetURL(url).SetMethod(tiny.Delete).
 		SetContentType("application/json; charset=utf-8").
@@ -185,4 +174,71 @@ func TestDeleteSuccess(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, 204, response.Response.StatusCode)
+}
+
+func TestDeleteNotExistFail(t *testing.T) {
+
+	version := 0
+	id := uuid.NewV4().String()
+
+	url := fmt.Sprintf("%s%s/%s", baseUrl, accountPath, id)
+	client := tiny.NewClient().SetDebugMode(true)
+
+	request := client.NewRequest().SetURL(url).SetMethod(tiny.Delete).
+		SetContentType("application/json; charset=utf-8").
+		AddQueryParam("version", fmt.Sprintf("%d", version))
+
+	response, err := client.Send(request)
+
+	require.NoError(t, err)
+	require.Equal(t, 404, response.Response.StatusCode)
+
+}
+
+func TestDeleteVersionIncorrectFail(t *testing.T) {
+
+	account := Account{}
+	readTestData(&account)
+	id := account.Data.ID
+	version := account.Data.Version + 1
+
+	url := fmt.Sprintf("%s%s/%s", baseUrl, accountPath, id)
+	client := tiny.NewClient()
+
+	request := client.NewRequest().SetURL(url).SetMethod(tiny.Delete).
+		SetContentType("application/json; charset=utf-8").
+		AddQueryParam("version", fmt.Sprintf("%d", version))
+
+	response, err := client.Send(request)
+
+	require.NoError(t, err)
+	require.Equal(t, 404, response.Response.StatusCode)
+
+}
+
+func TestPostFail(t *testing.T) {
+	account := Account{}
+	readTestData(&account)
+
+	url := fmt.Sprintf("%s%s", baseUrl, accountPath)
+	client := tiny.NewClient()
+
+	request := client.NewRequest().SetURL(url).SetBody(account).SetMethod(tiny.Post).
+		SetContentType("application/json; charset=utf-8")
+
+	response, err := client.Send(request)
+
+	require.NoError(t, err)
+	require.Equal(t, 201, response.Response.StatusCode)
+
+	response, err = client.Send(request)
+	require.Equal(t, 409, response.Response.StatusCode)
+
+	errRes := ErrorResponse{}
+	err = response.BodyUnmarshall(&errRes)
+	require.NoError(t, err)
+	require.True(t, len(errRes.ErrorMessage) > 0)
+
+	//cleaning the context
+	TestDeleteSuccess(t)
 }

@@ -69,7 +69,7 @@ func (client *Client) SetTimeout(timeout time.Duration) *Client {
 	return client
 }
 
-// newRequest method creates a new request instance, it will be used for Get, Post, Put, Delete, Patch, Head, Options, etc.
+// newRequest method creates a new request instance, it will be used for Get, Post, Put, Delete, Patch
 func (client *Client) NewRequest() *Request {
 	return &Request{
 		client:      client,
@@ -126,6 +126,7 @@ func (client *Client) Send(request *Request) (*Response, error) {
 	}
 
 	response := &Response{
+		client:     client,
 		Response:   res,
 		Request:    request,
 		ReceivedAt: time.Now(),

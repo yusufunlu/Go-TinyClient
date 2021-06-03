@@ -21,7 +21,7 @@ type Response struct {
 func (response *Response) ReadBody() ([]byte, error) {
 
 	// If r.bodyBytes already set then return r.bodyBytes
-	if len(response.bodyBytes) != 0 {
+	if response.bodyBytes != nil {
 		return response.bodyBytes, nil
 	}
 
@@ -49,6 +49,9 @@ func (response *Response) ReadBody() ([]byte, error) {
 
 	// Set response readBody
 	response.bodyBytes = b
+	if len(response.bodyBytes) == 0 {
+		response.client.InfoLogger.Println("Response body is empty")
+	}
 
 	// Close response bodyBytes
 	err = response.Response.Body.Close()
@@ -63,10 +66,13 @@ func (response *Response) ReadBody() ([]byte, error) {
 
 func (response *Response) BodyUnmarshall(v interface{}) error {
 	resBody, err := response.ReadBody()
+
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal(resBody, &v)
+
+	//if len(resBody) == 0 can be handled later
+	err = json.Unmarshal(resBody, v)
 	if err != nil {
 		response.client.ErrorLogger.Printf("%v", err)
 		return err
