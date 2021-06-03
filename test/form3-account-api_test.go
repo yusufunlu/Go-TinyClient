@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"os"
 	"testing"
-	tiny "tinyclient"
+	tiny "github.com/yusufunlu/tinyclient"
 )
 
 const (

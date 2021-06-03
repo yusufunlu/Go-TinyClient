@@ -16,7 +16,7 @@ import (
 	"strings"
 	"testing"
 	"time"
-	tiny "tinyclient"
+	tiny "github.com/yusufunlu/tinyclient"
 )
 
 var desiredData = `{"success": true,"data": "done!"}`

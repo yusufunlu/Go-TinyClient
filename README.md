@@ -1,12 +1,39 @@
-# ![tinyclient](tiny.jpg) tinyclient
+<p align="center"><img src="tiny.jpg"/>
 
-#Features
+<p align="center">
+<h1 align="center">tinyclient</h1>
+<p align="center">Simple HTTP client for Golang</p>
+
+## Features
 * Support body in string,[]byte,io.Reader,io.ReadCloser,map,slice or struct types
-* Support of redirection
 * Support of logger injection
+* Support of redirection
 * Support of default error logger which can be overridden 
 * Support of client and system info sending as User-Agent
-* No special function support of XML as body, you can still send as []byte or string
-* No special support of formdata, you can still configure your http.Request via request.HttpRequest
+* Support of *http.Request access for edge case configuration
 * Default SSL certificate verification is disabled, can be still overridden
+
+## Installation
+Repo is private so best installing way is from local. You can use ``git clone https://github.com/yusufunlu/tinyclient`` to copy to your local
+```
+<home>/
+ |-- tinyclient/
+ |-- hello/
+    |-- put into go.mod 
+        replace github.com/yusufunlu/tinyclient => ../tinyclient
+    |-- put into hello.go 
+        import (tiny "github.com/yusufunlu/tinyclient")
+```
+go to ``hello`` folder, use ``go mod tidy`` to synchronize the hello module's dependencies. It will add like ``require example.com/greetings v0.0.0-00010101000000-000000000000`` to ``go.mod``
+
+
+## Usage
+You can use alias while importing
+``import tiny "github.com/go-resty/resty/v2"``
+
+````
+client := tiny.NewClient()
+
+github.com/yusufunlu/tinyclient
+````
 
