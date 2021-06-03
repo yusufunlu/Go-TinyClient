@@ -9,8 +9,8 @@
 - [Prerequisites](#Prerequisites)
 - [Installation](#Installation)
 - [Usage](#Usage)
-- [About](#about)
-- [License](#license)
+- [Detailed Explanation](#explanation)
+- [Story](#story)
 
 
 ## Features
@@ -124,7 +124,7 @@ Client has default ErrorLogger. You override it or inject InfoLogger
 infoLogger := log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 client.InfoLogger = infoLogger
 ````
-Default client timeout is 15 sec, you can change it via ``client.SetTimeout(30)`` 
+Default client timeout is 15 sec, you can change it via `client.SetTimeout(30)` 
 
 Client and Request use builder pattern so you can chain functions
 Get request with query parameters with function chain
@@ -138,3 +138,7 @@ Creating request object via which client object doesn't effect request for now. 
 ````
 request := client.NewRequest()
 ````
+
+<a name="story"></a>
+# Story
+- [Story of development process and technical decisions ](STORY.md)
