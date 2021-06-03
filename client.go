@@ -115,7 +115,7 @@ func (client *Client) Send(request *Request) (*Response, error) {
 				fmt.Sprintf("HOST   : %s\n", request.HttpRequest.URL.Host) +
 				fmt.Sprintf("HEADERS:\n%s\n", headerString) +
 				fmt.Sprintf("BODY   :\n%v\n", string(request.bodyBytes)) +
-				"==============================================================================\n"
+				"------------------------------------------------------------------------------\n"
 		client.InfoLogger.Printf(requestLogString)
 	}
 
@@ -157,7 +157,7 @@ func (client *Client) Send(request *Request) (*Response, error) {
 				fmt.Sprintf("TIME DURATION: %v\n", elapsedDuration) +
 				fmt.Sprintf("RESPONSE BODY: %v\n", string(responseBytes)) +
 				fmt.Sprintf("HEADERS:\n%s\n", responseHeaderString) +
-				"==============================================================================\n"
+				"------------------------------------------------------------------------------\n"
 
 		client.InfoLogger.Printf(responseLogString)
 	}
