@@ -239,6 +239,6 @@ func TestPostFail(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, len(errRes.ErrorMessage) > 0)
 
-	//cleaning the context
+	//cleaning the data of context
 	TestDeleteSuccess(t)
 }

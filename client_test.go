@@ -268,6 +268,9 @@ func TestPostRedirect(t *testing.T) {
 
 			rw.Header().Set("Content-Type", req.Header.Get("Content-Type"))
 
+			rw.Header().Set("Location", "/myredirecturl")
+			rw.WriteHeader(301)
+			rw.Write("Redirecting...")
 			b, _ := ioutil.ReadAll(req.Body)
 			req.Body.Close()
 

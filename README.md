@@ -15,13 +15,12 @@
 
 ## Features
 * Support body in string,[]byte,io.Reader,io.ReadCloser,map,slice or struct types
-* Support of logger injection
+* Support of logger injection with default error logger and opt-in info logger
 * Support of redirection
-* Support of default error logger which can be overridden 
 * Support of client and system info sending as User-Agent
 * Support of *http.Request access for edge case configuration
 * Default SSL certificate verification is disabled, can be still overridden
-
+* Context injection
 ## Prerequisites
 Go version 1.13.X, 1.14.X, 1.15.X and 1.16.X
 ## Installation
@@ -142,3 +141,12 @@ request := client.NewRequest()
 <a name="story"></a>
 # Story
 - [Story of development process and technical decisions ](STORY.md)
+
+## License 
+Copyright (c) 2021 Yusuf Unlu
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. 
