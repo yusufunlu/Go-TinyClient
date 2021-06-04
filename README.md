@@ -10,8 +10,10 @@
 - [Installation](#Installation)
 - [Usage](#Usage)
 - [Detailed Explanation](#explanation)
-- [Story](#story)
 
+*I am new to Go*<br>
+*This README.md belongs to wrote down http client for this task*<br>
+*Please check [Task Story ](STORY.md) for overall explanation and story*
 
 ## Features
 * Support body in string,[]byte,io.Reader,io.ReadCloser,map,slice or struct types
@@ -137,11 +139,6 @@ Creating request object via which client object doesn't effect request for now. 
 ````
 request := client.NewRequest()
 ````
-
-<a name="story"></a>
-# Story
-* I am new to Go 
-- [Story of development process and technical decisions ](STORY.md)
 
 ## License 
 Copyright (c) 2021 Yusuf Unlu
