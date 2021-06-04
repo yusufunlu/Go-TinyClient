@@ -11,11 +11,6 @@ import (
 	"testing"
 )
 
-const (
-	baseUrl     = "accountapi:8080/v1"
-	accountPath = "/organisation/accounts"
-)
-
 type Account struct {
 	Data struct {
 		Type           string `json:"type,omitempty"`
@@ -79,6 +74,11 @@ type ErrorResponse struct {
 	ErrorMessage string `json:"error_message"`
 }
 
+func getApiServiceName() string {
+	url := fmt.Sprintf("%s%s", os.Getenv("servicename"), ":8080/v1/organisation/accounts")
+	return url
+}
+
 func readTestData(v interface{}) {
 
 	jsonFile, err := os.Open("./testdata/account-post-data.json")
@@ -94,7 +94,7 @@ func TestPostSuccess(t *testing.T) {
 	account := Account{}
 	readTestData(&account)
 
-	url := fmt.Sprintf("%s%s", baseUrl, accountPath)
+	url := getApiServiceName()
 	client := tiny.NewClient()
 
 	request := client.NewRequest().SetURL(url).SetBody(account).SetMethod(tiny.Post).
@@ -117,7 +117,7 @@ func TestFetchSuccess(t *testing.T) {
 	readTestData(&account)
 	id := account.Data.ID
 
-	url := fmt.Sprintf("%s%s/%s", baseUrl, accountPath, id)
+	url := fmt.Sprintf("%s/%s", getApiServiceName(), id)
 	client := tiny.NewClient()
 	request := client.NewRequest().SetURL(url).SetMethod(tiny.Get).
 		SetContentType("application/json; charset=utf-8")
@@ -139,7 +139,7 @@ func TestFetchFail(t *testing.T) {
 
 	id := uuid.NewV4().String()
 
-	url := fmt.Sprintf("%s%s/%s", baseUrl, accountPath, id)
+	url := fmt.Sprintf("%s/%s", getApiServiceName(), id)
 	client := tiny.NewClient().SetDebugMode(true)
 
 	request := client.NewRequest().SetURL(url).SetMethod(tiny.Get).
@@ -163,7 +163,7 @@ func TestDeleteSuccess(t *testing.T) {
 	id := account.Data.ID
 	version := account.Data.Version
 
-	url := fmt.Sprintf("%s%s/%s", baseUrl, accountPath, id)
+	url := fmt.Sprintf("%s/%s", getApiServiceName(), id)
 	client := tiny.NewClient()
 
 	request := client.NewRequest().SetURL(url).SetMethod(tiny.Delete).
@@ -181,8 +181,8 @@ func TestDeleteNotExistFail(t *testing.T) {
 	version := 0
 	id := uuid.NewV4().String()
 
-	url := fmt.Sprintf("%s%s/%s", baseUrl, accountPath, id)
-	client := tiny.NewClient().SetDebugMode(true)
+	url := fmt.Sprintf("%s/%s", getApiServiceName(), id)
+	client := tiny.NewClient()
 
 	request := client.NewRequest().SetURL(url).SetMethod(tiny.Delete).
 		SetContentType("application/json; charset=utf-8").
@@ -202,7 +202,7 @@ func TestDeleteVersionIncorrectFail(t *testing.T) {
 	id := account.Data.ID
 	version := account.Data.Version + 1
 
-	url := fmt.Sprintf("%s%s/%s", baseUrl, accountPath, id)
+	url := fmt.Sprintf("%s/%s", getApiServiceName(), id)
 	client := tiny.NewClient()
 
 	request := client.NewRequest().SetURL(url).SetMethod(tiny.Delete).
@@ -220,7 +220,7 @@ func TestPostFail(t *testing.T) {
 	account := Account{}
 	readTestData(&account)
 
-	url := fmt.Sprintf("%s%s", baseUrl, accountPath)
+	url := getApiServiceName()
 	client := tiny.NewClient()
 
 	request := client.NewRequest().SetURL(url).SetBody(account).SetMethod(tiny.Post).

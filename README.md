@@ -140,6 +140,7 @@ request := client.NewRequest()
 
 <a name="story"></a>
 # Story
+* I am new to Go 
 - [Story of development process and technical decisions ](STORY.md)
 
 ## License 

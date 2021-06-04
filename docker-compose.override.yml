@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  postgresql:
+    ports:
+      - 5432:5432
+  integration-tests:
+    container_name: integration-tests
+    build: .
+    depends_on:
+      - accountapi
+    env_file: variables.env

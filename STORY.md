@@ -3,7 +3,7 @@
 * Create, Fetch and Delete operations tested with integration tests on accounts resource
 * Success and fail scenarios has been tested
 * All tests start with docker-compose up
-* Tests coverage: 70.7% of statements and all PASS
+* Tests coverage: 74% of statements and all PASS
 
 ## About me
 I used to have almost zero experience on Golang except reading blog posts on Go performance
@@ -36,5 +36,15 @@ As a demonstration, tinyclient has error and info loggers. error logger is alway
 
 * I can say context and managing the lifecycle of objects is so important after my docker, Spring context and Android context experiences. Context is like a handlebar of which ones live upon that. Every tinyclient is can be managed by different contexts. Builtin http.Request support context injection which is more flexible but I took my way.
 
+* docker-compose.override.yml file to override default docker compose file and not change it
+  Added `ports: - 5432:5432` to postgresql to debug the database
+  accountapi passed as env variable to go integration tests to reach the service
+* Test results and coverage
+
+![Test results](test-results.PNG "Test results and coverage")
+## Caveats
 * Tests are working in orderly for creating. Last failed create operation clear the context by calling successful delete operation. I could clean the context in start of tests by calling delete operations or directly from db so did't 
 If succesfull delete test fail and same container(not image) is being used new tests can fail but it working for this situation. Needing -rm for container or context cleaning
+
+
+ 

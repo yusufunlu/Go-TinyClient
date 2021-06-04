@@ -17,4 +17,5 @@ RUN go mod download
 # Copy the code into the container
 COPY . .
 
-ENTRYPOINT ["go", "test", "-v", "./...", "-coverprofile", "cover.out"]
+#go test -v -coverpkg=./... -coverprofile=coverage.out ./...
+ENTRYPOINT ["go", "test", "-v", "-coverpkg=./...", "-coverprofile=coverage.out", "./..."]
