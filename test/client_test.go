@@ -1,4 +1,4 @@
-package tinyclient_test
+package interview_accountapi_test
 
 import (
 	"context"
@@ -246,9 +246,12 @@ func TestPostExternalAdressSuccess(t *testing.T) {
 
 	url := "https://httpbin.org/post"
 
-	client := tiny.NewClient().SetDebugMode(true)
+	client := tiny.NewClient()
 	request := client.NewRequest().SetURL(url).SetMethod("POST")
-	client.Send(request)
+	response, err := client.Send(request)
+
+	require.NoError(t, err)
+	require.Equal(t, 200, response.Response.StatusCode)
 }
 
 func RedirectHandler(w http.ResponseWriter, r *http.Request) {
@@ -267,10 +270,6 @@ func TestPostRedirect(t *testing.T) {
 			require.Equal(t, req.Header.Get("Content-Type"), "application/json; charset=utf-8")
 
 			rw.Header().Set("Content-Type", req.Header.Get("Content-Type"))
-
-			rw.Header().Set("Location", "/myredirecturl")
-			rw.WriteHeader(301)
-			rw.Write("Redirecting...")
 			b, _ := ioutil.ReadAll(req.Body)
 			req.Body.Close()
 
@@ -283,7 +282,10 @@ func TestPostRedirect(t *testing.T) {
 	// Start a local HTTP server
 	redirectServer := httptest.NewServer(
 		http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			http.Redirect(rw, req, server.URL+req.RequestURI, http.StatusFound)
+			//http.Redirect(rw, req, server.URL+req.RequestURI, http.StatusFound)
+			rw.Header().Set("Location", server.URL+req.RequestURI)
+			rw.WriteHeader(301)
+			rw.Write([]byte("Redirecting..."))
 		}),
 	)
 	defer redirectServer.Close()
@@ -437,37 +439,32 @@ func TestGetQueryParams(t *testing.T) {
 	require.Equal(t, 200, response.Response.StatusCode)
 }
 
-func TestGetDebugMode(t *testing.T) {
+func TestPostDebugMode(t *testing.T) {
 
 	// Start a local HTTP server
 	server := httptest.NewServer(
 		http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			time.Sleep(time.Second * 2)
 			// Test request
-			require.Equal(t, req.URL.String(), "/get")
-			require.Equal(t, req.Method, "GET")
-			require.Equal(t, req.Header.Get(tiny.ContentType), tiny.JsonContentType)
-			require.Equal(t, req.Header.Get("Test-Header"), "this is a test")
-
-			rw.Header().Set("Content-Type", "application/json")
-
-			_, err := rw.Write([]byte(desiredData))
+			require.Equal(t, req.URL.String(), "/post")
+			require.Equal(t, req.Method, "POST")
+			b, _ := ioutil.ReadAll(req.Body)
+			_, err := rw.Write(b)
 			require.NoError(t, err)
 		}),
 	)
 	defer server.Close()
 
-	url := fmt.Sprintf("%s/get", server.URL)
-
-	client := tiny.NewClient().SetTimeout(30)
-
-	request := client.NewRequest().SetURL(url).SetMethod("GET")
-	request.AddHeaders(map[string]string{"Test-Header": "this is a test"})
-	request.SetContentType("application/json; charset=utf-8")
+	url := fmt.Sprintf("%s/post", server.URL)
+	client := tiny.NewClient().SetDebugMode(true)
+	request := client.NewRequest().SetBody(desiredData).SetURL(url).SetMethod("POST")
 
 	response, err := client.Send(request)
 
 	require.NoError(t, err)
 	require.Equal(t, 200, response.Response.StatusCode)
+	resultBody, err := response.ReadBody()
+	require.Equal(t, string(resultBody), desiredData)
 }
 
 func TestPostCancelled(t *testing.T) {

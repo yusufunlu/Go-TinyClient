@@ -3,9 +3,11 @@
 * Create, Fetch and Delete operations tested with integration tests on accounts resource
 * Success and fail scenarios has been tested
 * All tests start with docker-compose up
+* Tests coverage: 70.7% of statements and all PASS
+
 ## About me
 I used to have almost zero experience on Golang except reading blog posts on Go performance
-As a ex-C and currenct Java focused fullstack developer Go seemed to me so humble and powerfull with good module system 
+As a ex-C and current Java focused fullstack developer Go seemed to me so humble and powerfull with good module system 
 It's module system as easy as node, it
 ## Inspired Projects
 * https://github.com/sendgrid/rest
@@ -28,11 +30,11 @@ As a demonstration, tinyclient has error and info loggers. error logger is alway
 
 * Collection data from clients is important nowadays for debug and analytics. I have added sending some system and client on User-Agent. This feature is controlled by debugMode too.
 
-* I know there is always a edge case we missed. Accessibility of *http.Request   from outside can solve those cases.
+* I know there is always an edge case we missed. Accessibility of *http.Request   from outside can solve those cases.
 
 * While I am working with Java some certificate problems such as ``javax.net.ssl.SSLHandshakeException: sun.security.validator.ValidatorException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target`` always overwhelming us per 6 months. So I decided to disable default SSL certificate verification 
 
 * I can say context and managing the lifecycle of objects is so important after my docker, Spring context and Android context experiences. Context is like a handlebar of which ones live upon that. Every tinyclient is can be managed by different contexts. Builtin http.Request support context injection which is more flexible but I took my way.
 
-* 
-
+* Tests are working in orderly for creating. Last failed create operation clear the context by calling successful delete operation. I could clean the context in start of tests by calling delete operations or directly from db so did't 
+If succesfull delete test fail and same container(not image) is being used new tests can fail but it working for this situation. Needing -rm for container or context cleaning
