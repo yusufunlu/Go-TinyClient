@@ -112,6 +112,10 @@ func (request *Request) parseRequestBody() (err error) {
 	//it can be any other stream too
 	if reader, ok := request.Body.(io.Reader); ok {
 		request.bodyBytes, err = ioutil.ReadAll(reader)
+		if err != nil {
+			request.client.ErrorLogger.Println(err)
+			return err
+		}
 	} else if b, ok := request.Body.([]byte); ok {
 		request.bodyBytes = b
 	} else if s, ok := request.Body.(string); ok {
@@ -119,12 +123,13 @@ func (request *Request) parseRequestBody() (err error) {
 	} else if IsJSONType(contentType) {
 		if kind == reflect.Struct || kind == reflect.Map || kind == reflect.Slice {
 			b, err := json.Marshal(request.Body)
-			request.bodyBytes = b
 			if err != nil {
+				request.client.ErrorLogger.Println(err)
 				return err
 			}
+			request.bodyBytes = b
 		} else if kind == reflect.Ptr {
-			err := errors.New("Request body is pointer which we don't support now, please use value at the pointer as body")
+			err := errors.New("Request body is pointer which we don't support for now, please use the value at the pointer as body")
 			request.client.ErrorLogger.Println(err)
 			return err
 		}

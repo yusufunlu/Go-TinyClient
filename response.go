@@ -28,14 +28,14 @@ func (response *Response) ReadBody() ([]byte, error) {
 	// Check if Response.resp (*http.Response) is nil
 	if response.Response == nil {
 		err := fmt.Errorf("http.Response is nil")
-		response.client.ErrorLogger.Printf("%v", err)
+		response.client.ErrorLogger.Println(err)
 		return nil, err
 	}
 
 	// Check if Response.resp.Body (*http.Response.Body) is nil
 	if response.Response.Body == nil {
 		err := fmt.Errorf("http.Response's Body is nil")
-		response.client.ErrorLogger.Printf("%v", err)
+		response.client.ErrorLogger.Println(err)
 		return nil, err
 	}
 
@@ -43,7 +43,6 @@ func (response *Response) ReadBody() ([]byte, error) {
 	b, err := ioutil.ReadAll(response.Response.Body)
 	if err != nil {
 		response.client.ErrorLogger.Printf("Can't read http.Response bodyBytes Error: %v!", err)
-		fmt.Println(err)
 		return nil, err
 	}
 
@@ -74,7 +73,7 @@ func (response *Response) BodyUnmarshall(v interface{}) error {
 	//if len(resBody) == 0 can be handled later
 	err = json.Unmarshal(resBody, v)
 	if err != nil {
-		response.client.ErrorLogger.Printf("%v", err)
+		response.client.ErrorLogger.Println(err)
 		return err
 	}
 	return nil

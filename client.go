@@ -7,8 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/host"
 	"io"
 	"io/ioutil"
 	"log"
@@ -17,6 +15,9 @@ import (
 	"os"
 	"regexp"
 	"time"
+
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/host"
 )
 
 var (
@@ -90,10 +91,16 @@ func (client *Client) SetDebugMode(debugMode bool) *Client {
 
 func (client *Client) Send(request *Request) (*Response, error) {
 
-	request.parseRequestBody()
-
-	client.fillHttpRequest(request)
-
+	err := request.parseRequestBody()
+	if err != nil {
+		request.client.ErrorLogger.Println(err)
+		return nil, err
+	}
+	err = client.fillHttpRequest(request)
+	if err != nil {
+		request.client.ErrorLogger.Println(err)
+		return nil, err
+	}
 	if request.HttpRequest.ContentLength > 0 && request.HttpRequest.GetBody == nil {
 		err := errors.New("request.GetBody cannot be nil because it prevents redirection when content length>0")
 		client.ErrorLogger.Println(err)
@@ -104,6 +111,8 @@ func (client *Client) Send(request *Request) (*Response, error) {
 		var headerString string
 		if headerBytes, err := json.Marshal(request.HttpRequest.Header); err != nil {
 			headerString = "Could not Marshal Request Headers"
+			client.ErrorLogger.Println(err)
+			return nil, err
 		} else {
 			headerString = string(headerBytes)
 		}
@@ -122,6 +131,7 @@ func (client *Client) Send(request *Request) (*Response, error) {
 	res, err := client.HTTPClient.Do(request.HttpRequest)
 
 	if err != nil {
+		client.ErrorLogger.Println(err)
 		return nil, err
 	}
 
@@ -139,12 +149,15 @@ func (client *Client) Send(request *Request) (*Response, error) {
 		var responseHeaderString string
 		if headerBytes, err := json.Marshal(res.Header); err != nil {
 			responseHeaderString = "Could not Marshal Req Headers"
+			client.ErrorLogger.Println(err)
+			return nil, err
 		} else {
 			responseHeaderString = string(headerBytes)
 		}
 
 		responseBytes, err := response.ReadBody()
 		if err != nil {
+			client.ErrorLogger.Println(err)
 			return nil, err
 		}
 
@@ -176,6 +189,7 @@ func (client *Client) fillHttpRequest(r *Request) (err error) {
 	// Set request URL
 	URL, err := r.generateURL()
 	if err != nil {
+		client.ErrorLogger.Println(err)
 		return err
 	}
 	r.HttpRequest.URL = URL
@@ -219,6 +233,7 @@ func (client *Client) fillHttpRequest(r *Request) (err error) {
 	}
 
 	if err != nil {
+		client.ErrorLogger.Println(err)
 		return err
 	}
 
