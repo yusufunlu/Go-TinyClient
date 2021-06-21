@@ -26,9 +26,9 @@
 ## Prerequisites
 Go version 1.13.X, 1.14.X, 1.15.X and 1.16.X
 ## Installation
-tinyclient is hosted on ``https://github.com/yusufunlu/tinyclient``
-add ``tiny "github.com/yusufunlu/tinyclient"`` to ``hello.go``
-go to ``hello`` folder, use ``go mod tidy`` to synchronize the hello module's dependencies. It will add like ``require example.com/greetings v0.0.0-00010101000000-000000000000`` to ``go.mod``
+* tinyclient is hosted on ``https://github.com/yusufunlu/tinyclient``
+* add ``tiny "github.com/yusufunlu/tinyclient"`` to ``hello.go``
+* go to ``hello`` folder, use ``go mod tidy`` to synchronize the hello module's dependencies. It will add like ``require example.com/greetings v0.0.0-00010101000000-000000000000`` to ``go.mod``
 
 
 ## Usage
