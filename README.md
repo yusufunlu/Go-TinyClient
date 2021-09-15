@@ -11,10 +11,6 @@
 - [Usage](#Usage)
 - [Detailed Explanation](#explanation)
 
-*I am new to Go*<br>
-*This README.md belongs to wrote down http client for this task*<br>
-*Please check [Task Story ](STORY.md) for overall explanation and story*
-
 ## Features
 * Support body in string,[]byte,io.Reader,io.ReadCloser,map,slice or struct types
 * Support of logger injection with default error logger and opt-in info logger
